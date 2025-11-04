@@ -118,14 +118,6 @@ mv cert.pem /usr/local/share/ca-certificates/gox.crt
 update-ca-certificates
 ```
 
-## Project structure
-
-- `cmd/gox/` — entry point, main binary
-- `internal/server/` — proxy implementation (SOCKS5, HTTPS), config, logic
-- `pkg/` — helper packages (e.g., file operations, autostart)
-- `Taskfile.yml` — build and generation tasks
-- `Dockerfile`, `docker-compose.yaml` — containerization
-
 ## License
 
 MIT
