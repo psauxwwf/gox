@@ -1,5 +1,4 @@
-auth:
-  "": ""
+auth: # empty for disable auth
 socks:
   listen: 0.0.0.0:31080
   enable: true
