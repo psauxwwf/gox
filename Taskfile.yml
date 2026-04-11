@@ -114,6 +114,51 @@ tasks:
       - cp server.key server.crt cmd/gox/
       - rm -f *.csr *.cnf
 
+  ca.patch:
+    desc: "regenerate patched ca.crt/ca.key from ./ca using ip.txt"
+    cmds:
+      - test -f ip.txt
+      - test -f ca/ca.crt
+      - test -f ca/ca.key
+      - cp ca/ca.key ca.key
+      - |
+        cat > ca.ext <<'EOF'
+        basicConstraints = critical,CA:TRUE
+        keyUsage = critical,keyCertSign,cRLSign,digitalSignature
+        subjectKeyIdentifier = hash
+        authorityKeyIdentifier = keyid:always,issuer
+        subjectAltName = @alt_names
+
+        [ alt_names ]
+        DNS.1 = proxy.local.lan
+        EOF
+      - |
+        i=1; while IFS= read -r raw || [ -n "$raw" ]; do \
+          ip="$(printf '%s' "$raw" | tr -d '"' | xargs)"; \
+          [ -z "$ip" ] && continue; \
+          printf 'IP.%s = %s\n' "$i" "$ip" >> ca.ext; \
+          i=$((i+1)); \
+        done < ip.txt
+      - openssl req -new -key ca.key -out ca.csr -subj "/CN=GoxCA"
+      - openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt -days 3650 -sha256 -extfile ca.ext
+      - rm -f ca.csr ca.ext
+
+  ca.setup:
+    desc: "install ca.crt into system trust store"
+    cmds:
+      - test -f ca.crt
+      - openssl x509 -in ca.crt -noout -subject | grep -qi "CN *= *GoxCA"
+      - |
+        if [ -d /etc/pki/ca-trust/source/anchors ] && command -v update-ca-trust >/dev/null 2>&1; then \
+          sudo cp ca.crt /etc/pki/ca-trust/source/anchors/gox.crt; \
+          sudo update-ca-trust extract; \
+          trust list | grep -i goxca; \
+        else \
+          sudo cp ca.crt /usr/local/share/ca-certificates/gox.crt; \
+          sudo update-ca-certificates; \
+          if command -v trust >/dev/null 2>&1; then trust list | grep -i goxca || true; fi; \
+        fi
+
   ping:
     desc: ping all hosts
     dir: ansible

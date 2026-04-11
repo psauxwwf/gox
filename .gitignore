@@ -17,3 +17,4 @@ ansible/inventory.0.ini
 ansible/inventory.1.ini
 ansible/inventory.2.ini
 ansible/inventory.3.ini
+/ip.txt
