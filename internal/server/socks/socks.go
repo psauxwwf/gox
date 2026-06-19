@@ -1,8 +1,9 @@
 package socks
 
 import (
-	"log"
-	"os"
+	"fmt"
+	"log/slog"
+	"maps"
 
 	"gox/internal/server/socks/ruler"
 
@@ -19,11 +20,7 @@ func New(
 	creds map[string]string,
 ) *Socks {
 	opt := []socks5.Option{
-		socks5.WithLogger(
-			socks5.NewLogger(
-				log.New(os.Stdout, "", log.LstdFlags),
-			),
-		),
+		socks5.WithLogger(slogLogger{}),
 		socks5.WithRule(ruler.New()),
 		socks5.WithResolver(socks5.DNSResolver{}),
 	}
@@ -47,18 +44,22 @@ func New(
 }
 
 func (s *Socks) Listen() error {
-	log.Printf("listen socks on %s", s.listen)
+	slog.Info("listen socks", "listen", s.listen)
 	return s.server.ListenAndServe(
 		"tcp",
 		s.listen,
 	)
 }
 
+type slogLogger struct{}
+
+func (slogLogger) Errorf(format string, args ...any) {
+	slog.Error(fmt.Sprintf(format, args...))
+}
+
 func toCreds(creds map[string]string) socks5.StaticCredentials {
 	var staticCreds = make(socks5.StaticCredentials)
-	for username, password := range creds {
-		staticCreds[username] = password
-	}
+	maps.Copy(staticCreds, creds)
 	return staticCreds
 }
 

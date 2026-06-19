@@ -13,7 +13,7 @@ Gox is a lightweight proxy server with SOCKS5 and HTTPS (HTTP CONNECT) support, 
 
 ## Quick Start
 
-> **To build the project, use the `task docker.build` command from the Taskfile.yml.**
+> **To build the project, use the `task build:docker` command from the Taskfile.yml.**
 
 ### Build the binary
 
@@ -24,13 +24,13 @@ task build
 Or build with obfuscation (garble):
 
 ```bash
-task build.garble
+task build:garble
 ```
 
 ### Generate certificates
 
 ```bash
-task web.certs
+task web:certs
 ```
 
 ### Run via Docker Compose
@@ -94,13 +94,13 @@ docker compose up -d
 To set up autostart, run:
 
 ```bash
-./gox -setup
+./gox setup
 ```
 
 To remove autostart:
 
 ```bash
-./gox -remove
+./gox remove
 ```
 
 ## Testing HTTPS proxy

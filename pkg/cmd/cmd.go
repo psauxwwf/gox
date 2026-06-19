@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os/exec"
 	"strings"
 )
@@ -27,7 +27,7 @@ func (c *Command) String() string {
 }
 
 func (c *Command) Log() {
-	log.Println(c)
+	slog.Info("run command", "command", c.String())
 }
 
 func (c *Command) WithEnv(env []string) *Command {

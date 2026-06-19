@@ -1,19 +1,18 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
 dotenv: [".env.build"]
 
 vars:
-  gobin: go
-  ldflags: "-X 'main.Username=$BUILD_USERNAME' -X 'main.Password=$BUILD_PASSWORD' -extldflags '-static' -w -s -buildid="
-  gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
-  asmflags: "all=-trimpath={{.PWD}}"
-  bin: "{{.PWD}}/bin"
-  app: "gox"
-  app_bin: "{{.bin}}/{{.app}}"
-  remote_user: root
-  remote_host: 192.168.200.53
-  remote_dir: "~/"
-  subject_alt_name: "IP:127.0.0.1, IP:192.168.0.1, DNS:proxy.local.lan"
+  GOBIN: go
+  LDFLAGS: "-X 'main.Username=$BUILD_USERNAME' -X 'main.Password=$BUILD_PASSWORD' -extldflags '-static' -w -s -buildid="
+  GCFLAGS: "all=-trimpath={{.ROOT_DIR}} -dwarf=false -l"
+  ASMFLAGS: "all=-trimpath={{.ROOT_DIR}}"
+  BIN_DIR: "{{.ROOT_DIR}}/bin"
+  APP: gox
+  APP_BIN: "{{.BIN_DIR}}/{{.APP}}"
+  SUBJECT_ALT_NAME: "IP:127.0.0.1, IP:192.168.0.1, DNS:proxy.local.lan"
 
 env:
   CGO_ENABLED: 0
@@ -22,89 +21,81 @@ env:
 
 tasks:
   setup:
-    desc: set up
+    desc: Create the build output directory.
     silent: true
     cmds:
-      - mkdir -p {{.bin}}
+      - mkdir -p {{.BIN_DIR}}
 
   build:
-    desc: common build
+    desc: Build the main binary.
     deps: [setup]
-    silent: false
     cmds:
       - >
-        {{.gobin}} build
+        {{.GOBIN}} build
         -tags netgo
-        -ldflags="{{.ldflags}}" 
+        -ldflags="{{.LDFLAGS}}"
         -trimpath 
-        -gcflags="{{.gcflags}}" 
-        -asmflags="{{.asmflags}}" 
-        -o {{.app_bin}} cmd/gox/main.go
-      - strip {{.app_bin}}
-      - objcopy --strip-unneeded {{.app_bin}}
+        -gcflags="{{.GCFLAGS}}"
+        -asmflags="{{.ASMFLAGS}}"
+        -o {{.APP_BIN}} cmd/gox/main.go
+      - strip {{.APP_BIN}}
+      - objcopy --strip-unneeded {{.APP_BIN}}
 
-  build.garble:
-    desc: common build
+  build:garble:
+    desc: Build the obfuscated binary.
     deps: [setup]
-    silent: false
     vars:
-      gobin: garble
-      app_bin: "{{.bin}}/{{.app}}_garble"
-      gcflags: "all=-trimpath={{.PWD}} -dwarf=false"
+      GOBIN: go tool garble
+      APP_BIN: "{{.BIN_DIR}}/{{.APP}}_garble"
+      GCFLAGS: "all=-trimpath={{.ROOT_DIR}} -dwarf=false"
     cmds:
       - >
-        {{.gobin}} -literals -tiny build 
+        {{.GOBIN}} -literals -tiny build
         -tags netgo
-        -ldflags="{{.ldflags}}" 
-        -trimpath 
-        -gcflags="{{.gcflags}}" 
-        -asmflags="{{.asmflags}}" 
-        -o {{.app_bin}} cmd/gox/main.go
-      - strip {{.app_bin}}
-      - objcopy --strip-unneeded {{.app_bin}}
+        -ldflags="{{.LDFLAGS}}"
+        -trimpath
+        -gcflags="{{.GCFLAGS}}"
+        -asmflags="{{.ASMFLAGS}}"
+        -o {{.APP_BIN}} cmd/gox/main.go
+      - strip {{.APP_BIN}}
+      - objcopy --strip-unneeded {{.APP_BIN}}
 
-  in-docker-build:
+  build:internal:
     deps:
       - build
-      - build.garble
-    silent: false
+      - build:garble
     cmds:
-      - rm -f /build/bin/*
-      - cp {{.app_bin}} {{.app_bin}}_crypt && bincrypter {{.app_bin}}_crypt
-      - cp {{.app_bin}}_garble {{.app_bin}}_garble_crypt && bincrypter {{.app_bin}}_garble_crypt
-      - upx --best --ultra-brute {{.app_bin}} -o {{.app_bin}}_upx
-      - upx --best --ultra-brute {{.app_bin}}_garble -o {{.app_bin}}_garble_upx
-      - mv {{.app_bin}}* /build/bin
+      - rm -f {{.APP_BIN}}_upx {{.APP_BIN}}_garble_upx
+      - upx --best {{.APP_BIN}} -o {{.APP_BIN}}_upx
+      - upx --best {{.APP_BIN}}_garble -o {{.APP_BIN}}_garble_upx
 
-  docker.build:
-    desc: build bin via docker
+  build:docker:
+    desc: Build binaries in Docker.
     deps: [setup]
-    silent: false
     cmds:
       - docker compose -f docker-compose.build.yaml up --build --force-recreate
 
   gox:
-    desc: build prod docker image
-    deps: [docker.build]
-    silent: false
+    desc: Build the production Docker image.
+    deps: [build:docker]
     cmds:
       - docker build -f Dockerfile -t ghcr.io/psauxwwf/gox:latest .
       - |
         docker save ghcr.io/psauxwwf/gox:latest | gzip > gox.tar.gz
 
   push:
-    desc: push docker in registry
+    desc: Push the Docker image to the registry.
     deps: [gox]
     silent: true
     cmds:
       - docker push ghcr.io/psauxwwf/gox:latest
 
-  web.certs:
-    desc: "generate certs for web"
+  web:certs:
+    desc: Generate web TLS certificates.
     cmds:
       - openssl genrsa -out ca.key 2048
       - openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt -subj "/CN=GoxCA"
-      - echo "subjectAltName = {{.subject_alt_name}}" > extfile.cnf
+      - echo "subjectAltName = {{.SUBJECT_ALT_NAME}}" > extfile.cnf
       - |
         for name in server; do \
           openssl genrsa -out $name.key 2048; \
@@ -114,8 +105,8 @@ tasks:
       - cp server.key server.crt cmd/gox/
       - rm -f *.csr *.cnf
 
-  ca.patch:
-    desc: "regenerate patched ca.crt/ca.key from ./ca using ip.txt"
+  ca:patch:
+    desc: Regenerate ca.crt/ca.key from ./ca using ip.txt.
     cmds:
       - test -f ip.txt
       - test -f ca/ca.crt
@@ -143,8 +134,8 @@ tasks:
       - openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt -days 3650 -sha256 -extfile ca.ext
       - rm -f ca.csr ca.ext
 
-  ca.setup:
-    desc: "install ca.crt into system trust store"
+  ca:setup:
+    desc: Install ca.crt into the system trust store.
     cmds:
       - test -f ca.crt
       - openssl x509 -in ca.crt -noout -subject | grep -qi "CN *= *GoxCA"
@@ -160,18 +151,18 @@ tasks:
         fi
 
   ping:
-    desc: ping all hosts
+    desc: Ping all Ansible hosts.
     dir: ansible
     vars:
-      bin: .venv/bin/
+      BIN: .venv/bin/
     cmds:
       - uv sync
-      - "{{.bin}}ansible all -m ping"
+      - "{{.BIN}}ansible all -m ping"
 
   playbook:
-    desc: run playbook
+    desc: Run the Ansible playbook.
     dir: ansible
     vars:
-      bin: .venv/bin/
+      BIN: .venv/bin/
     cmds:
-      - "{{.bin}}ansible-playbook playbook.yml -vvv | tee ansible.log"
+      - "{{.BIN}}ansible-playbook playbook.yml -vvv | tee ansible.log"

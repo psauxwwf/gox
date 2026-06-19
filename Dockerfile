@@ -8,4 +8,4 @@ RUN DEBIAN_FRONTEND=noninteractive \
     && rm --recursive --force /var/lib/apt/lists/* /tmp/* /var/tmp/*
 WORKDIR /gox
 COPY ./bin/gox .
-CMD ["./gox","-config","./config/config.yaml"]
+CMD ["./gox","--config","./config/config.yaml"]

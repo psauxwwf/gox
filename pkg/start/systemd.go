@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gox/pkg/cmd"
 	"gox/pkg/fs"
-	"log"
+	"log/slog"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -49,13 +49,12 @@ type systemd struct {
 
 func Systemd(user *user.User, home string) (*systemd, error) {
 	_start := &systemd{
-		isPerm:   (user.Uid == "0" || os.Getegid() == 0),
+		isPerm:   (user.Uid == "0" || os.Geteuid() == 0),
 		unitDest: unitRootPath,
 		binDest:  filepath.Join(home, binPath),
 		commands: []*cmd.Command{
 			cmd.New("systemctl", "daemon-reload"),
 			cmd.New("systemctl", "enable", "gox.service", "--now"),
-			cmd.New("systemctl", "restart", "gox.service"),
 			cmd.New("loginctl", "enable-linger", user.Username),
 		},
 	}
@@ -116,7 +115,7 @@ func (s *systemd) copyBin() error {
 	if err := fs.Copy(binPath, s.binDest); err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}
-	log.Printf("copy %s to %s", binPath, s.binDest)
+	slog.Info("copied binary", "from", binPath, "to", s.binDest)
 	return nil
 }
 
@@ -124,8 +123,6 @@ func (s *systemd) writeUnit() error {
 	if err := fs.Write(s.unitDest, s.unitContent); err != nil {
 		return fmt.Errorf("failed to write unit: %w", err)
 	}
-	log.Printf(`write
-%s
-to %s`, s.unitContent, s.unitDest)
+	slog.Info("wrote systemd unit", "path", s.unitDest, "content", s.unitContent)
 	return nil
 }

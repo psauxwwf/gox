@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -77,7 +77,7 @@ func authMiddleware(auth map[string]string, next http.Handler) http.Handler {
 }
 
 func (s *Https) Listen() error {
-	log.Printf("listen https on %s", s.listen)
+	slog.Info("listen https", "listen", s.listen)
 	server := &http.Server{
 		Addr:      s.listen,
 		TLSConfig: s.tls,

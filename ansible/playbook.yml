@@ -32,16 +32,16 @@
       become: "{{ not whoami_result.failed }}"
       become_method: sudo
 
-    - name: Run ./gox -remove (raw)
+    - name: Run ./gox remove (raw)
       ansible.builtin.raw: |
-        {{ bin_path }} -remove
+        {{ bin_path }} remove
       become: "{{ not whoami_result.failed }}"
       become_method: sudo
       ignore_errors: true
 
-    - name: Run ./gox -setup (raw)
+    - name: Run ./gox setup (raw)
       ansible.builtin.raw: |
-        {{ bin_path }} -setup
+        {{ bin_path }} setup
       become: "{{ not whoami_result.failed }}"
       become_method: sudo
       ignore_errors: true
