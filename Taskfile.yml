@@ -88,16 +88,16 @@ tasks:
     deps: [docker.build]
     silent: false
     cmds:
-      - docker build -f Dockerfile -t ghcr.io/devil666face/gox:latest .
+      - docker build -f Dockerfile -t ghcr.io/psauxwwf/gox:latest .
       - |
-        docker save ghcr.io/devil666face/gox:latest | gzip > gox.tar.gz
+        docker save ghcr.io/psauxwwf/gox:latest | gzip > gox.tar.gz
 
   push:
     desc: push docker in registry
     deps: [gox]
     silent: true
     cmds:
-      - docker push ghcr.io/devil666face/gox:latest
+      - docker push ghcr.io/psauxwwf/gox:latest
 
   web.certs:
     desc: "generate certs for web"

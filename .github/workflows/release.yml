@@ -48,7 +48,7 @@ jobs:
         run: echo "GITHUB_RELEASE_TAG=$(date +v%m.%d.%H)" >> "$GITHUB_ENV"
 
       - name: Set image name
-        run: echo "GITHUB_DOCKER_IMAGE=ghcr.io/devil666face/${{ github.event.repository.name }}" >> "$GITHUB_ENV"
+        run: echo "GITHUB_DOCKER_IMAGE=ghcr.io/psauxwwf/${{ github.event.repository.name }}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
