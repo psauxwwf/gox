@@ -12,8 +12,8 @@ RUN apt-get update && \
 RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONTAINER_TIMEZONE > /etc/timezone && \
   sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
 
-RUN wget https://go.dev/dl/go1.25.1.linux-amd64.tar.gz && \
-    tar -xf go1.25.1.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.26.7.linux-amd64.tar.gz && \
+    tar -xf go1.26.7.linux-amd64.tar.gz
 
 ENV PATH="${PATH}:/go/bin:/root/go/bin"
 
